@@ -7,6 +7,7 @@ import '../DatabaseService.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../themes.dart';
+import 'OrderTrackingScreen.dart'; // Import for navigation
 
 class ReorderScreen extends StatelessWidget {
   const ReorderScreen({super.key});
@@ -83,13 +84,13 @@ class ReorderScreen extends StatelessWidget {
   }
 
   Widget _buildOrderCard(BuildContext context, Map<String, dynamic> order) {
+    final String orderId = order['orderId'] ?? ''; // Ensure Order ID exists
     final items = (order['items'] as List<dynamic>?) ?? [];
     final Timestamp? timestamp = order['createdAt'];
     final dateStr = timestamp != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toDate())
         : 'Processing...';
 
-    // Handle int vs double types for total
     final double total = (order['total'] is int)
         ? (order['total'] as int).toDouble()
         : (order['total'] as double? ?? 0.0);
@@ -108,79 +109,110 @@ class ReorderScreen extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))
         ],
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.storefront_rounded, color: Colors.black87, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+      child: InkWell(
+        onTap: () {
+          // Tap card to track
+          if (orderId.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.storefront_rounded, color: Colors.black87, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Order Summary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(dateStr, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor)),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, thickness: 0.5),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _formatItemsList(items),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, thickness: 0.5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Order Summary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 4),
-                      Text(dateStr, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                      const Text("Total Paid", style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      Text("₹${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor)),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, thickness: 0.5),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _formatItemsList(items),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+                  // Actions Row
+                  Row(
+                    children: [
+                      // Track Button
+                      if (status.toLowerCase() != 'delivered' && status.toLowerCase() != 'cancelled')
+                        TextButton(
+                          onPressed: () {
+                            if (orderId.isNotEmpty) {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)));
+                            }
+                          },
+                          child: const Text("TRACK", style: TextStyle(color: AppTheme.swiggyOrange, fontWeight: FontWeight.bold)),
+                        ),
+
+                      const SizedBox(width: 8),
+
+                      OutlinedButton.icon(
+                        onPressed: () => _repeatOrder(context, items),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text("REPEAT"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          side: const BorderSide(color: AppTheme.primaryColor),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1, thickness: 0.5),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Total Paid", style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    Text("₹${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
-                  ],
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _repeatOrder(context, items),
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text("REPEAT ORDER"),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.primaryColor,
-                    side: const BorderSide(color: AppTheme.primaryColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

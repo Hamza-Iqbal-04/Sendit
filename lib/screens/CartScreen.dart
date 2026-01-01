@@ -5,6 +5,7 @@ import '../providers/cart_provider.dart';
 import '../providers/AddressProvider.dart';
 import '../widgets/AddressListScreen.dart';
 import '../themes.dart';
+import 'OrderTrackingScreen.dart'; // Import the new screen
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -372,7 +373,10 @@ class _CartScreenState extends State<CartScreen> {
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white)
+                            if (_isLoading)
+                              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            else
+                              const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white)
                           ],
                         )
                       ],
@@ -518,16 +522,17 @@ class _CartScreenState extends State<CartScreen> {
 
     setState(() => _isLoading = true);
     // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
     try {
-      // Pass the selected address ID to placeOrder
-      await cart.placeOrder(addressProvider.selectedAddress!.id);
+      // Pass the selected address ID to placeOrder and wait for Order ID
+      final String orderId = await cart.placeOrder(addressProvider.selectedAddress!.id);
 
       if(mounted) {
-        // Show success animation/dialog (Instamart style)
+        // Navigate to Order Tracking
         Navigator.pop(context); // Close Cart
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Order Placed Successfully!"), backgroundColor: AppTheme.qcGreen),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)),
         );
       }
     } catch (e) {

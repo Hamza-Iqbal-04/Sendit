@@ -69,7 +69,8 @@ class CartProvider with ChangeNotifier {
   }
 
   // UPDATED: Accepts addressId to link the order to the correct location
-  Future<void> placeOrder(String addressId) async {
+  // RETURN: Future<String> containing the orderId
+  Future<String> placeOrder(String addressId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User not logged in");
@@ -91,8 +92,8 @@ class CartProvider with ChangeNotifier {
       final deliveryFee = subtotal > 299 ? 0.0 : 29.0;
       final total = subtotal + deliveryFee;
 
-      // Create order
-      await _dbService.createOrder(
+      // Create order and get ID
+      final String orderId = await _dbService.createOrder(
         userId: user.uid,
         items: orderItems,
         subtotal: subtotal,
@@ -103,6 +104,8 @@ class CartProvider with ChangeNotifier {
 
       // Clear cart after successful order
       clearCart();
+
+      return orderId;
 
     } catch (e) {
       rethrow;
