@@ -7,7 +7,7 @@ import '../DatabaseService.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../themes.dart';
-import 'OrderTrackingScreen.dart'; // Import for navigation
+import 'OrderTrackingScreen.dart';
 
 class ReorderScreen extends StatefulWidget {
   const ReorderScreen({super.key});
@@ -17,13 +17,12 @@ class ReorderScreen extends StatefulWidget {
 }
 
 class _ReorderScreenState extends State<ReorderScreen> {
-  final int _limit = 3;
-  int _currentLimit = 3;
+  final int _limit = 5;
+  int _currentLimit = 5;
   bool _isLoadingMore = false;
 
   @override
   Widget build(BuildContext context) {
-    // Use the service directly to ensure we get the correct path and data processing
     final dbService = DatabaseService();
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
@@ -37,7 +36,7 @@ class _ReorderScreenState extends State<ReorderScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text("Past Orders", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text("Past Orders", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF2D3436))),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
@@ -45,7 +44,6 @@ class _ReorderScreenState extends State<ReorderScreen> {
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        // Reverted to using the service to guarantee data availability
         stream: dbService.getUserOrders(userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -60,18 +58,13 @@ class _ReorderScreenState extends State<ReorderScreen> {
             return _buildEmptyState(context);
           }
 
-          // Full list of orders from the database
           final allOrders = snapshot.data!;
-
-          // Pagination Logic:
-          // We limit the number of items displayed based on _currentLimit.
-          // Since we are streaming all orders (standard for small-medium apps),
-          // we just slice the list for display.
           final bool hasMore = allOrders.length > _currentLimit;
           final displayOrders = allOrders.take(_currentLimit).toList();
 
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Bottom padding for floating nav
+            // INCREASED PADDING: Changed bottom padding from 120 to 160 to prevent floating cart overlap
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
             physics: const BouncingScrollPhysics(),
             itemCount: displayOrders.length + (hasMore ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -79,7 +72,6 @@ class _ReorderScreenState extends State<ReorderScreen> {
               if (index == displayOrders.length) {
                 return _buildLoadMoreButton();
               }
-
               return _buildModernOrderCard(context, displayOrders[index]);
             },
           );
@@ -90,21 +82,18 @@ class _ReorderScreenState extends State<ReorderScreen> {
 
   Widget _buildLoadMoreButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
         child: _isLoadingMore
             ? const SizedBox(
-            height: 24,
-            width: 24,
+            height: 24, width: 24,
             child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.swiggyOrange)
         )
-            : TextButton.icon(
+            : TextButton(
           onPressed: () {
             setState(() {
               _isLoadingMore = true;
             });
-
-            // Simulate network delay for UI effect
             Future.delayed(const Duration(milliseconds: 500), () {
               if (mounted) {
                 setState(() {
@@ -114,16 +103,16 @@ class _ReorderScreenState extends State<ReorderScreen> {
               }
             });
           },
-          icon: const Icon(Icons.expand_more_rounded, color: AppTheme.swiggyOrange),
-          label: const Text(
-              "Load More Orders",
-              style: TextStyle(color: AppTheme.swiggyOrange, fontWeight: FontWeight.bold)
-          ),
           style: TextButton.styleFrom(
-            backgroundColor: AppTheme.swiggyOrange.withOpacity(0.1),
+            backgroundColor: Colors.white,
+            foregroundColor: AppTheme.swiggyOrange,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: AppTheme.swiggyOrange.withOpacity(0.3)),
+            ),
           ),
+          child: const Text("Load More Orders", style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -139,31 +128,37 @@ class _ReorderScreenState extends State<ReorderScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15)],
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))
+              ],
             ),
             child: Icon(Icons.receipt_long_rounded, size: 60, color: Colors.grey[300]),
           ),
           const SizedBox(height: 24),
           Text(
             "No past orders",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                color: const Color(0xFF2D3436)
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             "Your order history will appear here",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
           const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false),
+            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.swiggyOrange,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("Start Shopping", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text("Start Shopping", style: TextStyle(fontWeight: FontWeight.w800)),
           )
         ],
       ),
@@ -184,25 +179,25 @@ class _ReorderScreenState extends State<ReorderScreen> {
 
     final String status = order['status'] ?? 'Pending';
 
-    // Status Colors
-    Color statusBgColor;
-    Color statusTextColor;
+    // Status Styling
+    Color statusBg;
+    Color statusText;
     IconData statusIcon;
 
     switch (status.toLowerCase()) {
       case 'delivered':
-        statusBgColor = AppTheme.qcGreenLight;
-        statusTextColor = AppTheme.qcGreen;
+        statusBg = AppTheme.qcGreenLight;
+        statusText = AppTheme.qcGreen;
         statusIcon = Icons.check_circle_rounded;
         break;
       case 'cancelled':
-        statusBgColor = Colors.red.shade50;
-        statusTextColor = Colors.red;
+        statusBg = const Color(0xFFFFF0F0);
+        statusText = const Color(0xFFE74C3C);
         statusIcon = Icons.cancel_rounded;
         break;
       default:
-        statusBgColor = Colors.orange.shade50;
-        statusTextColor = Colors.orange.shade800;
+        statusBg = const Color(0xFFFFF8E1);
+        statusText = const Color(0xFFFFA000);
         statusIcon = Icons.access_time_filled_rounded;
     }
 
@@ -210,10 +205,11 @@ class _ReorderScreenState extends State<ReorderScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
+            color: const Color(0xFF2C3E50).withOpacity(0.04),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           )
         ],
@@ -235,49 +231,48 @@ class _ReorderScreenState extends State<ReorderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Icon + Date + Status
+                // Header Row
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFF5F6FA),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.storefront_rounded, color: Colors.black87, size: 22),
+                      child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF2D3436), size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Order Summary",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary),
+                          Text(
+                            "Order #${orderId.length > 8 ? orderId.substring(0, 8) : orderId}".toUpperCase(),
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF2D3436)),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             dateStr,
-                            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusBgColor,
+                        color: statusBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(statusIcon, size: 12, color: statusTextColor),
+                          Icon(statusIcon, size: 12, color: statusText),
                           const SizedBox(width: 4),
                           Text(
                             status.toUpperCase(),
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: statusTextColor),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: statusText),
                           ),
                         ],
                       ),
@@ -285,37 +280,35 @@ class _ReorderScreenState extends State<ReorderScreen> {
                   ],
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F5)),
-                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: Color(0xFFF0F0F5)),
+                const SizedBox(height: 16),
 
-                // Items List
+                // Items
                 Text(
                   _formatItemsList(items),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
+                  style: const TextStyle(color: Color(0xFF636E72), fontSize: 13, height: 1.5, fontWeight: FontWeight.w500),
                 ),
 
                 const SizedBox(height: 16),
 
-                // Footer: Total + Actions
+                // Footer
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Total Paid", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade500, letterSpacing: 0.5)),
+                        Text("Total Amount", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade400)),
                         const SizedBox(height: 2),
-                        Text("₹${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
+                        Text("₹${total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF2D3436))),
                       ],
                     ),
 
                     Row(
                       children: [
-                        // Track Button (Only for active orders)
                         if (status.toLowerCase() != 'delivered' && status.toLowerCase() != 'cancelled') ...[
                           TextButton(
                             onPressed: () {
@@ -323,25 +316,22 @@ class _ReorderScreenState extends State<ReorderScreen> {
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)));
                               }
                             },
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.swiggyOrange,
-                              textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            child: const Text("TRACK"),
+                            child: const Text("Track Order", style: TextStyle(fontWeight: FontWeight.w700)),
                           ),
                           const SizedBox(width: 8),
                         ],
 
-                        // Repeat Button
-                        OutlinedButton.icon(
+                        ElevatedButton.icon(
                           onPressed: () => _repeatOrder(context, items),
                           icon: const Icon(Icons.refresh_rounded, size: 16),
-                          label: const Text("REPEAT"),
-                          style: OutlinedButton.styleFrom(
+                          label: const Text("Repeat"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
                             foregroundColor: AppTheme.swiggyOrange,
-                            side: BorderSide(color: AppTheme.swiggyOrange.withOpacity(0.5)),
+                            elevation: 0,
+                            side: BorderSide(color: AppTheme.swiggyOrange.withOpacity(0.3)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           ),
                         ),
                       ],
@@ -381,10 +371,13 @@ class _ReorderScreenState extends State<ReorderScreen> {
       SnackBar(
         content: const Text("Items added to cart!"),
         backgroundColor: AppTheme.qcGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
         action: SnackBarAction(
             label: "VIEW CART",
             textColor: Colors.white,
-            onPressed: () => Navigator.pushNamed(context, '/cart')
+            onPressed: () => Navigator.pushNamed(context, '/cart') // Ensure route exists or replace with push
         ),
       ),
     );

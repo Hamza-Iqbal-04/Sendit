@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/favourite.dart';
 import '../themes.dart';
 import '../widgets/ProductCard.dart';
-import '../widgets/FloatingCartButton.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
@@ -33,54 +32,56 @@ class FavoritesScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Consumer<FavoritesProvider>(
-            builder: (context, favorites, child) {
-              if (favorites.count == 0) {
-                return _buildEmptyState(context);
-              }
+      // Removed Stack and FloatingCartButton because MainNavigation handles the global cart button
+      body: Consumer<FavoritesProvider>(
+        builder: (context, favorites, child) {
+          if (favorites.count == 0) {
+            return _buildEmptyState(context);
+          }
 
-              final favoriteList = favorites.items.values.toList();
+          final favoriteList = favorites.items.values.toList();
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Count
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Text(
-                      "${favorites.count} Items Saved",
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Count
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  "${favorites.count} Items Saved",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
+                ),
+              ),
 
-                  // Product Grid
-                  Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100), // Bottom padding for cart button
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.68, // Matches Home Screen card ratio
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 12,
-                      ),
-                      itemCount: favoriteList.length,
-                      itemBuilder: (ctx, i) => ProductCard(product: favoriteList[i]),
-                    ),
+              // Product Grid
+              Expanded(
+                child: GridView.builder(
+                  // Bottom padding ensures content isn't hidden behind the global FloatingCartButton
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.68, // Matches Home Screen card ratio
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 12,
                   ),
-                ],
-              );
-            },
-          ),
-
-          // Floating Cart Button (Always visible if items in cart)
-          const FloatingCartButton(),
-        ],
+                  itemCount: favoriteList.length,
+                  itemBuilder: (ctx, i) {
+                    final product = favoriteList[i];
+                    return ProductCard(
+                      product: product,
+                      // Unique Hero Tag for Favorites Screen to prevent conflicts with Home Screen
+                      heroTag: "fav_${product.id}",
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -127,7 +128,10 @@ class FavoritesScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // Navigate back to Home Tab (index 0)
-              Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+              // Assuming MainNavigation listens to a provider or we pop to root
+              // For now, if pushed, pop. If tab, this might need a callback or Provider logic.
+              // Safe default:
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),

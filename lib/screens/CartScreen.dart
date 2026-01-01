@@ -18,6 +18,8 @@ class _CartScreenState extends State<CartScreen> {
   bool _isLoading = false;
   double _tipAmount = 0.0;
   bool _donateToFeedingIndia = false;
+  String _selectedPaymentMethod = 'UPI'; // Default payment method
+  String _selectedPaymentIcon = 'assets/upi.png'; // Mock icon path, will use IconData
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +59,7 @@ class _CartScreenState extends State<CartScreen> {
           final double savings = (itemTotal * 0.1); // Mock savings
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 120),
+            padding: const EdgeInsets.only(bottom: 140), // Increased bottom padding for larger payment sheet
             child: Column(
               children: [
                 // 1. Delivery Promise
@@ -145,7 +147,7 @@ class _CartScreenState extends State<CartScreen> {
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
                   child: Row(
                     children: [
-                      Icon(Icons.local_offer_outlined, color: AppTheme.instamartPurple),
+                      const Icon(Icons.local_offer_outlined, color: AppTheme.instamartPurple),
                       const SizedBox(width: 12),
                       const Text("Apply Coupon", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       const Spacer(),
@@ -290,97 +292,107 @@ class _CartScreenState extends State<CartScreen> {
 
           return Container(
             color: Colors.white,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 32), // INCREASED bottom padding
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Address Strip
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddressListScreen(isSelectionMode: true),
-                        ),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                  // Address Strip (Optional, keeping small)
+                  if (selectedAddress != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Delivering to ${selectedAddress.label}, ${selectedAddress.street}",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
                           ),
-                          child: Icon(
-                            selectedAddress == null ? Icons.location_off : Icons.location_on,
-                            size: 20,
-                            color: AppTheme.swiggyOrange,
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressListScreen(isSelectionMode: true))),
+                            child: const Text("CHANGE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.swiggyOrange)),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Bottom Bar Row: [Payment Method Selector] [ PAY BUTTON ]
+                  Row(
+                    children: [
+                      // Payment Method Selector
+                      Expanded(
+                        flex: 4,
+                        child: GestureDetector(
+                          onTap: () => _showPaymentOptions(context),
+                          child: Container(
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(_getPaymentIcon(_selectedPaymentMethod), size: 24, color: AppTheme.swiggyOrange),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text("PAY USING", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                      Text(
+                                        _selectedPaymentMethod,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.keyboard_arrow_up, size: 18, color: Colors.grey),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Pay Button
+                      Expanded(
+                        flex: 6,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : () => _placeOrder(cart, addressProvider),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.swiggyOrange,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.grey.shade300,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                selectedAddress == null ? "No Address Selected" : "Delivering to ${selectedAddress.label}",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey.shade800),
+                                "Pay ₹${toPay.toStringAsFixed(0)}",
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
-                              Text(
-                                selectedAddress == null ? "Tap to select delivery location" : "${selectedAddress.street}, ${selectedAddress.city}",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward, size: 16),
                             ],
                           ),
                         ),
-                        Text(
-                          "CHANGE",
-                          style: TextStyle(color: AppTheme.swiggyOrange, fontWeight: FontWeight.w800, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Pay Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : () => _placeOrder(cart, addressProvider),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.qcGreen, // Green for "Go"
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text("₹${toPay.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                            const Text("TOTAL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white70)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              selectedAddress == null ? "Select Address" : "Proceed to Pay",
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_isLoading)
-                              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            else
-                              const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white)
-                          ],
-                        )
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -388,6 +400,59 @@ class _CartScreenState extends State<CartScreen> {
           );
         },
       ),
+    );
+  }
+
+  IconData _getPaymentIcon(String method) {
+    if (method.contains("UPI")) return Icons.qr_code_scanner;
+    if (method.contains("Card")) return Icons.credit_card;
+    if (method.contains("Net")) return Icons.account_balance;
+    if (method.contains("Cash")) return Icons.money;
+    return Icons.payment;
+  }
+
+  void _showPaymentOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Select Payment Method", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              _buildPaymentOptionItem("UPI", Icons.qr_code_scanner, "Google Pay, PhonePe, Paytm"),
+              _buildPaymentOptionItem("Credit / Debit Card", Icons.credit_card, "Visa, Mastercard, RuPay"),
+              _buildPaymentOptionItem("Net Banking", Icons.account_balance, "All Major Banks"),
+              _buildPaymentOptionItem("Cash on Delivery", Icons.money, "Pay cash at your doorstep"),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentOptionItem(String title, IconData icon, String subtitle) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+        child: Icon(icon, color: Colors.black87),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+      trailing: _selectedPaymentMethod == title ? const Icon(Icons.check_circle, color: AppTheme.swiggyOrange) : null,
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = title;
+        });
+        Navigator.pop(context);
+      },
     );
   }
 

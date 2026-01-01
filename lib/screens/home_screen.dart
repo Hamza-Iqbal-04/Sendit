@@ -319,7 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSectionTitle("Your Go-to Items"),
-                      _buildHorizontalProductList(filter: (p) => true),
+                      // Pass a unique section ID
+                      _buildHorizontalProductList(filter: (p) => true, sectionId: "goto"),
 
                       _buildSectionTitle("In the Spotlight"),
                       _buildExploreGrid(),
@@ -337,13 +338,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (isAllTab) ...[
                         const SizedBox(height: 12),
                         _buildSectionTitle("Best Sellers"),
-                        _buildHorizontalProductList(filter: (p) => p.isBestSeller),
+                        // Pass a unique section ID
+                        _buildHorizontalProductList(filter: (p) => p.isBestSeller, sectionId: "bestsellers"),
                       ],
 
                       if (isAllTab) ...[
                         const SizedBox(height: 12),
                         _buildSectionTitle("Featured Collections"),
-                        _buildHorizontalProductList(filter: (p) => p.isFeatured),
+                        // Pass a unique section ID
+                        _buildHorizontalProductList(filter: (p) => p.isFeatured, sectionId: "featured"),
                       ],
 
                       _buildAdBanner(),
@@ -413,17 +416,17 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person, size: 24, color: Colors.white),
-            ),
-          ),
+          // GestureDetector(
+          //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+          //   child: Container(
+          //     padding: const EdgeInsets.all(8),
+          //     decoration: BoxDecoration(
+          //       color: Colors.white.withOpacity(0.2),
+          //       shape: BoxShape.circle,
+          //     ),
+          //     child: const Icon(Icons.person, size: 24, color: Colors.white),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -860,7 +863,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- REUSABLE PRODUCT LIST BUILDER ---
-  Widget _buildHorizontalProductList({required bool Function(Product) filter}) {
+  Widget _buildHorizontalProductList({required bool Function(Product) filter, required String sectionId}) {
     return StreamBuilder<List<Product>>(
       stream: _allProductsStream, // Use the single broad stream
       builder: (context, snapshot) {
@@ -884,7 +887,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Removed outer GestureDetector as ProductCard now handles the tap
                 child: ProductCard(
                     product: filteredProducts[index],
-                    heroTag: "home_${filteredProducts[index].id}_$index" // Ensuring uniqueness
+                    // FIXED: added specific sectionId to the tag to prevent collision between lists
+                    heroTag: "home_${sectionId}_${filteredProducts[index].id}"
                 ),
               );
             },
